@@ -1,0 +1,67 @@
+
+sc.textFile("dengue/chuvas.csv").take(1)
+res0: Array[String] = Array(data,mm,uf)
+
+val crdd = sc.textFile("dengue/chuvas.csv").filter( x => ! x.contains("uf"))
+val crdd1 = crdd.map( x => x.split(","))
+
+crdd1.take(2)
+res1: Array[Array[String]] = Array(Array(2015-09-02, -9999.0, PA), Array(2015-09-02, -9999.0, PA))
+
+val crdd2 = crdd1.map( x => {
+   val arr = x.toArray
+   val uf_ano_mes = arr(2) + "-" + arr(0).substring(0,7)
+   val mm = if (arr(1).toFloat < 0) 0.0 else arr(1).toFloat
+   (uf_ano_mes,mm)
+ })
+ 
+crdd2.take(2)
+res10: Array[(String, Double)] = Array((PA-2015-09,0.0), (PA-2015-09,0.0))
+
+val crdd3 = crdd2.reduceByKey( _+_ ).mapValues( x => math.round( x * 10.0)/10.0 )
+
+crdd3.take(2)
+res11: Array[(String, Double)] = Array((ES-2017-05,905.2), (MA-2015-09,65.8))
+
+
+sc.textFile("dengue/casos_dengue.txt").take(1)
+res11: Array[String] = Array(id|data_iniSE|casos|ibge_code|cidade|uf|cep|latitude|longitude)
+
+val drdd = sc.textFile("dengue/casos_dengue.txt").filter( x => ! x.contains("data_iniSE"))
+val drdd1 = drdd.map( x => x.split("\\|"))
+
+drdd1.take(2)
+res19: Array[Array[String]] = Array(Array(0, 2015-11-08, 0.0, 230010, Abaiara, CE, 63240-000, -7.3364, -39.0613), Array(1, 2015-12-27, 0.0, 230010, Abaiara, CE, 63240-000, -7.3364, -39.0613))
+
+drdd1.filter( x => x(1).size < 7).take(5)
+res27: Array[Array[String]] = Array(Array(95534, "", 11.0, 330455, Rio De Janeiro, RJ, 20000-000, -22.9201, -43.3307), Array(95535, "", 32.0, 330455, Rio De Janeiro, RJ, 20000-000, -22.9201, -43.3307), Array(95536, "", 30.0, 330455, Rio De Janeiro, RJ, 20000-000, -22.9201, -43.3307), Array(95537, "", 21.0, 330455, Rio De Janeiro, RJ, 20000-000, -22.9201, -43.3307), Array(95538, "", 49.0, 330455, Rio De Janeiro, RJ, 20000-000, -22.9201, -43.3307))
+
+val drdd2 = drdd1.filter( x => x(1).size > 7).map( x => {
+   val arr = x.toArray
+   val uf_ano_mes = arr(5) + "-" + arr(1).substring(0,7)
+   val casos = if (arr(2) == "") 0.0 else arr(2).toFloat
+   (uf_ano_mes,casos)
+ })
+
+drdd2.take(2)
+res20: Array[(String, Float)] = Array((CE-2015-11,0.0), (CE-2015-12,0.0))
+
+val drdd3 = drdd2.reduceByKey( _+_ )
+
+drdd3.take(2)
+res30: Array[(String, Double)] = Array((ES-2019-06,17690.0), (RS-2019-07,55.0))
+
+drdd3.join(crdd3).take(10)
+res33: Array[(String, (Double, Double))] = Array((ES-2017-05,(1038.0,905.2000035792589)), (CE-2018-04,(3192.0,2000.2000020742416)), (RS-2018-01,(0.0,6684.600015923381)), (PR-2019-07,(3847.0,816.6000007987022)), (RJ-2017-03,(1710.0,2958.999998062849)), (RS-2019-11,(25.0,5579.399995222688)), (SP-2018-02,(372.0,5156.400009617209)), (PR-2016-10,(2979.0,3740.6000144034624)), (SP-2019-07,(699.0,1961.2000064253807)), (RS-2016-04,(4.0,7445.600010290742)))
+
+val rdd_final = drdd3.join(crdd3)
+
+rdd_final.take(2)
+res14: Array[(String, (Double, Double))] = Array((ES-2017-05,(1038.0,905.2)), (CE-2018-04,(3192.0,2000.2)))
+
+val rdd_saida = rdd_final.map( { case (x,y) => x + "-" + y._1 + "-" + y._2 } ).map( x => x.replace("-", ";"))
+
+rdd_saida.take(2)
+res21: Array[String] = Array(ES;2017;05;1038.0;905.2, CE;2018;04;3192.0;2000.2)
+
+rdd_saida.coalesce(1).saveAsTextFile("dengue/dengue_por_uf_ano_mes.csv")
