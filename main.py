@@ -1,6 +1,7 @@
 from apache_beam.transforms.core import GroupByKey
 import apache_beam as beam
-from apache_beam.io import ReadFromText 
+from apache_beam.io import ReadFromText
+from apache_beam.io.textio import WriteToText
 from apache_beam.options.pipeline_options import PipelineOptions
 
 def converte_string_to_lista (elem, delim=';'):
@@ -61,7 +62,8 @@ resultado = (
     | "passo 2" >> beam.CoGroupByKey()
     | "passo 3" >> beam.Filter(filtra_dicionario_invalido)
     | "passo 4" >> beam.Map(convert_lista_to_string)
-    | "passo 5" >> beam.Map(print)
+    | "passo 5" >> WriteToText(file_path_prefix='consolidado_dengue', file_name_suffix='csv', header='UF,ano,mes,casos,mm')
+    | "passo 6" >> beam.Map(print)
 )
 
 pipeline.run()
